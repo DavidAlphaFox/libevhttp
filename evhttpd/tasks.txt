@@ -1,0 +1,369 @@
+[版本:0.0.5]
+任务:
+1. URL编码，在HttpServlet中加入指示是否解码方法，
+    bool enableURLDecode(), 返回true，说明将被解码，否则，不解码
+2. 针对POST方式提交表单形式数据（application/x-www-form-urlencoded），增加允许将值对数据合并入请求参数的功能, 
+3. 增加解析民“multipart/form-data; boundary=”类型表单数据功能，并同时可将值对数据合并入请求参数中, 上传的文件，紧将
+   文件名加入到请求参数中，文件内容另外处理
+4. Http10Handler::isChunkedTransferEncoding()方法优化，将：
+    bool Http10Handler::isChunkedTransferEncoding(){
+        if(request.contentType && strcmp(request.contentType, "binary/octet-stream") == 0){
+            const char* chunked = request.getHeader("Transfer-Encoding");
+            return chunked && strcmp(chunked, "chunked") == 0;
+        }
+        return false;
+    }
+    改为:
+    bool Http10Handler::isChunkedTransferEncoding(){
+        const char* chunked = request.getHeader("Transfer-Encoding");
+        return chunked && strcmp(chunked, "chunked") == 0;
+    }
+    只要设置了chunked就认为是chunked方式传输数据
+
+5. 增加ProcessSignal类型，将进程消息转换为事件
+
+6. 去除CommandListener类型，然后使用进程事件ProcessReceiveMessageEvent代替
+
+7. 增加Timer类型，方便使用定时功能
+
+8. HttpHandler类型，增加notifyClose()方法，通知关闭Handler, 主要是在退出时使用
+
+9. HttpServlet类型，增加onNotifiedCloseEvent()事件方法，当调用HttpHandler.notifyClose()方法
+   时，会调用HttpServlet.onNotifiedCloseEvent()方法。
+
+10. Process类型
+   1) 增加notifyClose()方法，可向子进程或父进程通知退出， 当子时程中，接收到退出消息时
+      会自动调用所有HttpHandler的notifyClose()方法，如果HttpServlet正在运行过程中，会
+      自动调用HttpServlet.onNotifiedCloseEvent()方法，可onNotifiedCloseEvent()中做一些
+      清理工作
+   2) 加强子进程和父进程间的消息传递功能, 增加EVENT_TYPE_PROCESS_SEND_MESSAGE和EVENT_TYPE_PROCESS_RECEIVE_MESSAGE
+      两种事件类型，父子进程间发送完成消息后会产生EVENT_TYPE_PROCESS_SEND_MESSAGE事件，当接收到父或子进程发送来的
+      消息时，会产生EVENT_TYPE_PROCESS_RECEIVE_MESSAGE事件，对应的事件类型为：ProcessSendMessageEvent和ProcessReceiveMessageEvent。
+      同时对应增加两个方法:virtual bool sendMessage(MSG_TYPE msg, void* buff=NULL, unsigned int n=0)和
+      virtual bool sendMessage(ProcessMessage_t* msg)。用来发送消息。
+      消息类型为一个字节宽度，100及以内的消息保留消息，内部使用，100以上的消息类型可自行根据业务定义。
+      当前的消息类型有：
+        //自定义消息， 当消息类型不够用时，可以使用此消息类型
+        #define MSG_TYPE_USER_DEFINED 1
+        //查询进程当前活动Handler数量（HttpProcess父进程中使用）
+        #define MSG_TYPE_QUERY_ACTIVE_HANDLERS 2
+        //查询进程所有已经完成的请求数量（HttpProcess父进程中使用）
+        #define MSG_TYPE_QUERY_TOTAL_REQUESTS 3
+        //查询进程当前所有HttpHandler数量（HttpProcess父进程中使用）
+        #define MSG_TYPE_QUERY_HTTP_HANDLERS 4
+        //通知退出消息, 一般为主进程通知子进程需要退出
+        #define MSG_TYPE_EXIT 5
+
+    3) 去掉以前的read()和write()方法
+
+11. 将IIOReader和IIOWriter以及IIOPump等类型中的buff改为void*类型
+
+12. Dispatcher类型, 增加方法：
+   1) void sendMessage(MSG_TYPE type, void* msg, size_t len);
+      向子所有进程发送消息
+
+   2) void notifyCloseProcesses(); 
+      通知所有子进程退出
+
+   3) void killProcesses();
+       强行关闭所有子进程
+
+[版本:0.0.4]
+(完成)1. 修改使之能在ubuntu中编译通过
+
+
+[版本:0.0.3]
+任务：
+(完成)1. IIOWriter类型
+         (完成)a. 增加transport(IIOPump* iopumper)方法，可以将IIOPump写入目标设备
+         (完成)b. 增加virtual bool write(const char* buff, size_t n, bool copy=true, off_t offset = -1)方法参数
+               增加了copy参数，如果设置copy=true, 将会生成buff的复本， 否则，将直接引用buff
+         (完成)c. 增加start()方法，修改为手动启动，以前是在提交写请求时自动启动写服务，现在需要手动调用start()方法启动。
+            同时对应的也增加stop()方法来停止写， 这样在使用IIOWriter及所有子类型时，需要手动调用start()方法来写
+            数据。
+            
+(完成)2. Response类型
+         (完成)a. 增加sendfile方法，可以按照一定速率发送文件
+         (完成)b. 优化部份方法         
+
+(完成)3. 优化HttpHandler, Socket的读和写, 使用IIOReader和IIOWriter的SocketNIOReader和SocketNIOWriter实现
+(取消此功能)4. EvNIOWriter中在销毁QueueDataItem时，生成事件
+(完成)3. 优化HttpProcess
+4. IIOReader， EVNIOReader
+   (完成)a. read()方法中参数bool full参数，指示是否将buff读满时再触发读完成事件
+   (取消)b. 增加读超时功能
+5. 增加IIOWriter和IIOWriter的Socket读写实现，SocketNIOReader,SocketNIOWriter
+6. 移除AIOWriter和AIOReader两个类型
+
+
+[注意]
+libev和libevhttp安装完成后，需要:ldconfig /usr/local/lib
+
+1. 流
+  输入流(IInputStream)
+    方法: 
+         a. 提交一个读请求
+    事件:
+         a. 读完成事件
+
+  输出流(IOutputStream)
+
+
+任务(1.0)：
+
+1. 日志
+
+2. 请求行解码
+
+3. 消息头折行
+
+4. 定义一个名字空间
+
+5. 当客户端连接上后，没有发送数据的超时处理
+
+
+6. 在响应里直接发送文件，aio
+
+7. proxy功能，向其它http server转发请求
+
+
+8. 基础做好后就要考虑7层负载均衡的功能
+
+9. 子进程或父进程读发送过来的命令时，附带的数据没读完处理
+
+9. 父子进程间发送数据时，一直在缓冲区中发送不出去处理
+   1. 父进程向子进程发送FD时，由于系统太忙，一直发送失败，errno==11情况处理
+
+10. 你的httpserver里要加入lua脚本支持
+
+11. 在response中增加响应头已经被发送出去的检测方法
+
+12. HttpRocess中的sendFD优化，加入重复次数和超时限制
+
+13. 计划将EvNIOReader和EvNIOWriter改用ev::async或ev::timer来实现
+
+14. 在IOPump中增加设置读文件的开始位置和字节数量的方法
+
+
+
+///测试用的数据器
+JMHC1	180.153.149.39	O8uB^WAnVDeyQQ11smkRoRNBk
+JMHC2	180.153.149.42	O8uB^WAnVDeyQQ11smkRoRNBk
+try  12:13:47
+好的
+老高  12:14:10
+JMHC1	180.153.149.39	O8uB^WAnVDeyQQ11smkRoRNBk
+JMHC2	180.153.149.42	O8uB^WAnVDeyQQ11smkRoRNBk
+GGYY1	180.153.149.94	O8uB^WAnVDeyQQ11smkRoRNBk
+GGYY2	180.153.149.105	O8uB^WAnVDeyQQ11smkRoRNBk
+GGDB1	180.153.149.131	O8uB^WAnVDeyQQ11smkRoRNBk
+
+
+nginx的速度大概是：3600×5=18000
+c 5000
+
+
+7台：2600×7=18000
+
+
+
+
+老高  14:13:40
+aio搞好后就把我们的流server替换掉
+老高  14:14:09
+aio部分可以参考nginx的aio和sendfile部分
+
+
+
+老高 14:13:40 
+aio搞好后就把我们的流server替换掉 
+老高 14:14:09 
+aio部分可以参考nginx的aio和sendfile部分 
+try 14:14:17 
+好的 
+老高 14:16:06 
+未来还有rtmp rtsp等流媒体协议要基于你的框架实现 要抓紧啊 
+
+http://180.168.69.39/player2.html
+
+
+//60上的flv文件
+http://192.168.99.60:3080/flv?file=/opt/videostorage/backup/data/video/2011/03/17/55/200549eff3431a89b8d81e8cfed5d11080p-0000.flv
+
+http://192.168.99.60:3080/flv?file=/opt/videostorage/backup/data/video/2011/03/17/55/200549eff3431a89b8d81e8cfed5d11080p-0000.flv
+
+
+http://192.168.99.60:3080/pipe/home/vdev/flvs/1.flv?speed=1048576&engine=NIO
+http://192.168.99.60:3080/pipe/home/vdev/flvs/1.flv?speed=1048576&engine=AIO
+http://192.168.99.60:3080/pipe/home/vdev/flvs/1.flv?speed=1048576&engine=SF
+
+
+http://192.168.99.60:3080/flv?file=/home/vdev/flvs/1.flv
+/home/vdev/flvs/1.flv
+
+
+http://192.168.99.49:3080/flv?file=/root/flvs/1.flv
+http://192.168.99.49:3080/flv?file=/root/flvs/3.flv&speed=10240000
+
+
+http://192.168.56.100:3080/flv?file=/root/flvs/1.flv
+http://192.168.56.100:3080/flv?file=/root/flvs/2.flv
+
+http://192.168.56.100:3080/flv?file=/root/flvs/4.iso
+
+
+http://192.168.56.100:3080/flv2?file=/root/flvs/1.flv
+http://192.168.56.100:3080/flv2?file=/root/flvs/2.flv
+http://192.168.56.100:3080/flv2?file=/root/flvs/3.flv
+http://192.168.56.100:3080/flv2?file=/root/flvs/4.iso
+
+http://192.168.56.100:3080/aio?file=/root/flvs/1.flv
+http://192.168.56.100:3080/aio?file=/root/flvs/2.flv
+http://192.168.56.100:3080/aio?file=/root/flvs/3.flv
+http://192.168.56.100:3080/aio?file=/root/flvs/4.iso
+
+http://192.168.56.100:3080/aio?file=/root/flvs/2.flv&speed=10240000
+http://192.168.56.100:3080/aio?file=/root/flvs/3.flv&speed=10240000
+
+http://192.168.56.100:3080/sf?file=/root/flvs/2.flv
+http://192.168.56.100:3080/sf?file=/root/flvs/1.flv&speed=1048576
+
+
+
+
+http://192.168.99.49:3080/sf?file=/root/flvs/3.flv
+
+
+./hh -c 100 -n 1000 "http://192.168.56.100:3080/dwn/root/flvs/2.flv?speed=1048576&engine=NIO"
+./hh -c 100 -n 1000 "http://192.168.56.100:3080/dwn/root/flvs/2.flv?speed=1048576&engine=AIO"
+http://192.168.56.100:3080/aio?file=/root/flvs/2.flv&speed=1048576
+
+
+http://192.168.56.100:3080/sf/root/flvs/2.flv?speed=1048576
+
+
+./hh -c 100 -n 1000 "http://192.168.56.100:3080/pipe/root/flvs/2.flv?speed=1048576&engine=NIO"
+
+
+./hh -c 100 -n 1000 "http://192.168.99.49:3080/dwn/root/flvs/1.flv?speed=1048576&engine=NIO"
+http://192.168.99.49:3080/dwn/root/flvs/1.flv?speed=1048576&engine=AIO
+
+http://192.168.99.49:3080/aio?file=/root/flvs/1.flv&speed=1048576
+ab -c 1 -n 1 "http://192.168.99.49:3080/pipe/root/flvs/3.flv?speed=1048576&engine=AIO"
+ab -c 1 -n 1 "http://192.168.99.49:3080/sf/root/flvs/3.flv?speed=1048576"
+
+./hh -c 1 -n 1 "http://192.168.99.60:3080/dwn/home/vdev/flvs/3.flv?speed=1048576&engine=AIO"
+./hh -c 1000 -n 10000 "http://192.168.99.60:3080/dwn/home/vdev/flvs/3.flv?speed=1048576&engine=NIO"
+
+./hh -c 1 -n 1 "http://192.168.99.60:3080/pipe/home/vdev/flvs/3.flv?speed=1048576&engine=AIO"
+./hh -c 1 -n 1 "http://192.168.99.60:3080/sf/home/vdev/flvs/3.flv?speed=1048576"
+
+./hh -c 100 -n 1000 "http://192.168.99.60:3080/sf?file=/home/vdev/flvs/3.flv&speed=1048576"
+
+
+
+ab -c 1 -n 1 "http://192.168.99.48:3080/dwn/root/flvs/1.flv?speed=1048576&engine=NIO"
+
+
+http://192.168.56.100:3080/pipe/root/flvs/2.flv?speed=1048576&engine=NIO
+
+valgrind --tool=memcheck ./evhttpd
+
+valgrind  --tool=massif   ./evhttpd 
+
+valgrind --leak-check=full --tool=memcheck ./evhttpd
+
+--leak-check=full
+
+如果sendfile实现有问题 可以用mmap实现
+
+
+调用 mmap() 时会将文件直接读取到内核缓冲区，并把内核缓冲区直接共享到用户空间
+调用 write() 时，直接将内核缓冲区的数据复制到网络协议引擎
+
+
+evhttpd: ev.c:2665: ev_io_start: Assertion `("libev: ev_io_start called with negative fd", fd >= 0)' failed.
+
+cd .netbeans/remote/192.168.56.100/try-Windows-x86/D/MyWorkspace/MyProjects/netBeans/evhttpd/dist/Release/GNU-Linux-x86/
+
+
+http://192.168.99.60:3080/flv/root/flvs/4.txt
+
+GET /flv/root/flvs/4.txt HTTP/1.1
+Host: 192.168.99.60:3080
+
+GET /flv/root/flvs/3.html HTTP/1.1
+Host: 192.168.99.60:3080
+
+GET /file/root/flvs/8.aaa HTTP/1.1
+Host: 192.168.99.60:3080
+
+http://192.168.99.60:3080/flv/root/flvs/3.html
+
+
+http://192.168.56.100:3080/empty
+
+GET /empty HTTP/1.1
+Host: 192.168.56.100:3080
+
+GET /file/root/flvs/4.aaa HTTP/1.1
+Host: 192.168.56.100:3080
+
+
+GET /file/root/flvs/5.aaa HTTP/1.1
+Host: 192.168.56.100:3080
+
+GET /file/root/flvs/4.aaa HTTP/1.1
+Host: 192.168.56.100:3080
+
+http://192.168.56.100:3080/file/root/flvs/5.aaa
+
+http://192.168.56.100:3080/file/root/flvs/4.aaa
+
+GET /test HTTP/1.1
+Host: 192.168.56.100:7070
+Connection: close
+dddd
+aaaa
+dddd:fffff
+
+
+GET /test/getinfo?a=2&b=7 HTTP/1.1
+
+GET /test HTTP/1.1
+Host: 192.168.99.48:3080
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-CN; rv:1.9.2.15) Gecko/20110303 Firefox/3.6.15
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,* / *;q=0.8
+Accept-Language: zh-cn,zh;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: GB2312,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 115
+Connection: close
+TMH:    tmh1  
+TMH:  tmh2 dd 
+TMH:tmh3
+TMH:tmh4
+
+
+
+POST /test HTTP/1.1
+Host: 192.168.99.48:3080
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-CN; rv:1.9.2.15) Gecko/20110303 Firefox/3.6.15
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 0
+TMH: tmh1 tmh2 tmh3
+ tmh4 tmh5
+     tmh6 tmh7
+tmh8 tmh9
+
+
+valgrind --leak-check=full --tool=memcheck ./evhttpd
+
+/usr/local/bin/valgrind --leak-check=full --tool=memcheck
+
+HttpHandler::handleWriteCompletionEvent, error
+HttpHandler::handleWriteCompletionEvent, e->length == 0
+EvNIOWriter::handle, te->readEvent
+EvNIOWriter::handle done.
+EvNIOWriter::reset, wd->buff is NULL
+FileServerHttpServlet::service start
