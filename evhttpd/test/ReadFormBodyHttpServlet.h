@@ -55,6 +55,20 @@ public:
     virtual void service(Request& req, Response& resp){
         resp.setContentType("text/html; charset=utf-8");
         
+        resp.write("<br>[all request parameters data]<br>");
+        
+        const vector<const char*>& pnames = req.getParameterNames();
+        for(vector<const char*>::const_iterator it = pnames.begin(); it != pnames.end(); it++){
+            resp.write(*it);
+            resp.write("=");
+            vector<const char*> pvalues;
+            req.getParameterValues(*it, pvalues);
+            for(vector<const char*>::iterator vit = pvalues.begin(); vit != pvalues.end(); vit++){
+                resp.write(value(*vit));
+                resp.write(",");
+            }
+            resp.write("<br>");
+        }
         
         resp.write("<br>[all request headers]<br>");
         const vector<const char*>& hnames =  req.getHeaderNames();

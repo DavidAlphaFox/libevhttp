@@ -9,9 +9,9 @@
 #define	_RESOURCES_H
 
 //#define LOG_LEVEL LOG_DEBUG_LEVEL
-//#define LOG_LEVEL LOG_INFO_LEVEL
+#define LOG_LEVEL LOG_INFO_LEVEL
 //#define LOG_LEVEL LOG_ERROR_LEVEL
-#define LOG_LEVEL LOG_WARN_LEVEL
+//#define LOG_LEVEL LOG_WARN_LEVEL
 
 #include <ext/hash_map>
 #include <string.h>
@@ -103,6 +103,8 @@ static const char* METHOD_PUT = "PUT";
 #define CHAR_EQ '='
 //:号
 #define CHAR_COLON ':'
+
+#define CHAR_ZERO '0'
 
 //回车换行符，\r\n
 #define STR_CRLF "\r\n"
