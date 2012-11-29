@@ -11,6 +11,7 @@
 #include "RequestData.h"
 #include "StringUtils.h"
 #include "MemoryPool.h"
+#include "HttpUtils.h"
 
 using namespace std;
 
@@ -33,6 +34,13 @@ RequestData::~RequestData() {
 /** 清理ParameterData */
 void RequestData::cleanParameterData(){
     parameters.clear();
+
+    std::vector<std::string*>::iterator it = decodedParameters.begin();
+    for(; it != decodedParameters.end(); it++){
+        delete *it;
+    }
+    decodedParameters.clear();
+    
     if(parameterDataSource){
         MemoryPool::instance.free(parameterDataSource);
         parameterDataSource = NULL;
@@ -105,6 +113,7 @@ void RequestData::clean(){
 
 void RequestData::buildRequestLine(){
     if(existReqLine && !requestLineDuplicate){
+        
         int n = reqLineEndPos - reqLineStartPos;
         requestLineDuplicate = (char*)MemoryPool::instance.malloc(n + 1);
         memcpy(requestLineDuplicate, data.data(), n);
@@ -112,8 +121,11 @@ void RequestData::buildRequestLine(){
         method = &requestLineDuplicate[methodStartPos];
         requestLineDuplicate[methodEndPos] = 0;
 
-        path = &requestLineDuplicate[pathStartPos];
+        char* p = &requestLineDuplicate[pathStartPos];
         requestLineDuplicate[pathEndPos] = 0;
+        decodedPath.clear();
+        HttpUtils::urlDecode(p, decodedPath);
+        path = decodedPath.c_str();
 
         parameter = &requestLineDuplicate[parameterStartPos];
         requestLineDuplicate[parameterEndPos] = 0;
@@ -188,12 +200,6 @@ void RequestData::buildRequestParameters(){
         reqLineParamSize = parameterEndPos - parameterStartPos;
     }
 
-    //计算主体数据长度
-//    if(existReqBody && body){
-//        bodySize = 1 + strlen(body);
-//    }
-
-//    paramSourceSize = reqLineParamSize + bodySize + 1;
     paramSourceSize = reqLineParamSize + 1;
 
     parameterDataSource = (char*)MemoryPool::instance.malloc(paramSourceSize);
@@ -202,14 +208,6 @@ void RequestData::buildRequestParameters(){
         memcpy(begin, parameter, reqLineParamSize);
         begin += reqLineParamSize;
     }
-//    if(bodySize > 0){
-//        if(parameterDataSource > 0){
-//            *begin = '&';
-//            begin++;
-//        }
-//        memcpy(begin, body, bodySize);
-//        begin += bodySize;
-//    }
 
     *begin = 0; //设置串结束标记
     parseParameters(parameterDataSource);
@@ -250,10 +248,18 @@ void RequestData::parseParameters(char* p){
                     }
                 }
                 if(ksize > 0){
-                    //addParameter(key, value);
-//                    if(strlen(key) != 0){
-                        parameters.add(key, value);
-//                    }
+                    string* keypt = new string();
+                    HttpUtils::urlDecode(key, *keypt);
+                    decodedParameters.push_back(keypt);
+                    
+                    if(value){
+                        string* valuept = new string();
+                        HttpUtils::urlDecode(value, *valuept);
+                        decodedParameters.push_back(valuept);
+                        parameters.add(keypt->c_str(), valuept->c_str());
+                    }else{
+                        parameters.add(keypt->c_str(), NULL);
+                    }
                 }
                 
                 //准备下一项的参数

@@ -87,3 +87,78 @@ void HttpUtils::parseParameters(char* data, KeyValues<>* params){
     }
 }
 
+
+
+bool HttpUtils::urlEncode(const char* srcurl, std::string& dsturl){
+    if(!srcurl)return false;
+    int i; 
+    char ch; 
+    int srcurlsize = strlen(srcurl);
+    char buff[32];
+    for (i=0; i<srcurlsize; i++) {
+        ch = srcurl[i]; 
+        if ((ch >= 'A') && (ch <= 'Z')) { 
+            //ss_string_append_char(dsturl, ch); 
+            dsturl.append(1, ch);
+        } else if ((ch >= 'a') && (ch <= 'z')) { 
+            //ss_string_append_char(dsturl, ch); 
+            dsturl.append(1, ch);
+        } else if ((ch >= '0') && (ch <= '9')) { 
+            //ss_string_append_char(dsturl, ch); 
+            dsturl.append(1, ch);
+        } else if(ch == ' '){ 
+            //ss_string_append_char(dsturl, '+');
+            dsturl.append(1, '+');
+        } else { 
+           sprintf(buff, "%%%02X", (unsigned char)ch); 
+           //ss_string_append_cstr(dsturl, buff);
+           dsturl.append(buff);
+        } 
+    } 
+    return true;
+}
+
+
+char HttpUtils::char2num(char ch){ 
+    if(ch>='0' && ch<='9')return (char)(ch-'0'); 
+    if(ch>='a' && ch<='f')return (char)(ch-'a'+10); 
+    if(ch>='A' && ch<='F')return (char)(ch-'A'+10); 
+    return CHAR_ZERO; 
+}
+
+bool HttpUtils::urlDecode(const char* srcurl, std::string& dsturl){
+    if(!srcurl)return false;
+    char ch, ch1, ch2; 
+    int i; 
+    int srcurlsize = strlen(srcurl);
+    for (i=0; i<srcurlsize; i++) {
+        ch = srcurl[i]; 
+        switch (ch) { 
+            case '+': 
+                //ss_string_append_char(dsturl, SS_CHAR_SPACE); 
+                dsturl.append(1, (char)CHAR_SP);
+                break;
+            case '%': 
+                if (i+2 < srcurlsize) { 
+                    ch1 = char2num(srcurl[i+1]); 
+                    ch2 = char2num(srcurl[i+2]); 
+                    if ((ch1 != CHAR_ZERO) && (ch2 != CHAR_ZERO)) { 
+                        //ss_string_append_char(dsturl, (char)((ch1<<4) | ch2)); 
+                        dsturl.append(1, (char)((ch1<<4) | ch2)); 
+                        i += 2; 
+                        break; 
+                    }
+                }
+
+            default: 
+                //ss_string_append_char(dsturl, ch); 
+                dsturl.append(1, ch);
+                break; 
+        } 
+    }
+    
+    return true;
+}
+
+
+

@@ -295,6 +295,18 @@ private:
 
 TestEventListener testEventListener;
 
+#include "../HttpUtils.h"
+void test(){
+    const char* v = "!@#$%$AAAAbbbb#$%测试";
+    printf("%s\n", v);
+    string val;
+    HttpUtils::urlEncode(v, val);
+    printf("%s\n", val.c_str());
+    string val2;
+    HttpUtils::urlDecode(val.c_str(), val2);
+    printf("%s\n", val2.c_str());
+}
+
 int main(int argc, char** argv) {
     
     Config config;
@@ -304,7 +316,7 @@ int main(int argc, char** argv) {
 //    config.responseBufferSize = 10;
     config.eventListener = &testEventListener;
  
-    //配置HttpServer
+    //test();
     
     httpServer = new HttpServer(SERVER_PORT, &servletFactory, &config);
     //httpServer = &httpServer;

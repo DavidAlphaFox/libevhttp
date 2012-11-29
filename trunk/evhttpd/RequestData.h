@@ -110,6 +110,12 @@ private:
     //主体内容复本
     char* requestBodyDuplicate;
 
+    //初解码后的路径
+    std::string decodedPath;
+    
+    //被解码后的参数数据, 需要手动释放std::string
+    std::vector<std::string*> decodedParameters;
+    
     //头位置信息
     //消息头位置信息, 包括头Key和Value
     typedef struct HeaderPos{

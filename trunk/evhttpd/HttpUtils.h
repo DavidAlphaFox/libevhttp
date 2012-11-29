@@ -10,7 +10,7 @@
 #include <sys/types.h>
 #include "KeyValues.h"
 #include "IBodyBuilder.h"
-
+#include <string>
 
 /**
  * Http相关工具
@@ -57,10 +57,24 @@ public:
     static void parseParameters(char* data, KeyValues<>* params);
     
     
-    
+    /**
+    * 对URL进行编码
+    * 
+    * @param srcurl 未编码的url字符串
+    * @param dsturl 在dsturl中返回编码后的字符串
+    */
+    static bool urlEncode(const char* srcurl, std::string& dsturl);
+
+    /**
+    * 对URL编码后的字符串进行解码
+    * 
+    * @param srcurl 编码过的url字符串
+    * @param dsturl 在dsturl中返回解码后的字符串
+    */
+    static bool urlDecode(const char* srcurl, std::string& dsturl);
     
 private:
-
+    static char char2num(char ch);
 };
 
 #endif	/* HTTPUTILS_H */
